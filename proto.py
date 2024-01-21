@@ -48,12 +48,29 @@ def get_mem():
     return f"{used_percent}%"
 
 
+uptimestr = """
+4544.69 18031.09
+"""
+
+
+def get_uptime():
+    match = re.search(r"(\d+\.\d+)\s+(\d+\.\d+)", uptimestr)
+    if not match:
+        return "NO UPTIME"
+    total_seconds = float(match.group(1))
+    idle_cores = float(match.group(2))
+    up_days = float(total_seconds / 86400)
+    active_percent = float((1 - idle_cores / (4 * total_seconds)) * 100)
+    return f"{up_days:.2f}d active {active_percent:.2f}%"
+
+
 font14 = ImageFont.truetype("Font.ttc", 14)
 
 fields = [
     [None, get_ip_address(), font14, [10, 10]],
     [None, get_temp(), font14, [10, 30]],
-    ["Mem", get_mem(), font14, [10, 50]],
+    ["Mem", get_mem(), font14, [60, 30]],
+    ["Up", get_uptime(), font14, [10, 50]],
 ]
 
 
@@ -68,12 +85,6 @@ def main():
             draw.text((x, y), f"{name} {field}", font=font, fill=0)
         else:
             draw.text((x, y), f"{field}", font=font, fill=0)
-
-    # Draw the image on the screen
-    #         #
-    # image.show()
-    # Write image to a file (PNG):
-    # delete old image
 
     image.save("proto.png")
 
