@@ -1,33 +1,39 @@
 #!/usr/bin/env python
 
 # Device-dependent imports:
-import socket
+from PIL import Image, ImageDraw, ImageFont
 import os
+import re
+import socket
+import subprocess
 import sys
+import time
+import warnings
 
 
 def get_hostname():
-    return socket.gethostname()[:10].lower()
+    return socket.gethostname().lower()
 
 
 hostname = get_hostname()
-is_pi = hostname == "pion"
-this_dir = os.path.dirname(os.path.realpath(__file__))
-parent_dir = os.path.dirname(this_dir)
-picdir = os.path.join(parent_dir, "pic")
+
+if hostname == "pion":
+    is_pi = True
+else:
+    is_pi = False
+
+pi_parent_dir = "/home/rpi/e-Paper/RaspberryPi_JetsonNano/python"
 
 if is_pi:
-    sys.path.append(os.path.join(parent_dir, "lib"))
-    from waveshare_epd import epd2in13_V4
+    sys.path.append(os.path.join(pi_parent_dir, "lib"))
+    # Suppress warnings about GPIO:
+    with warnings.catch_warnings(action="ignore"):
+        from waveshare_epd import epd2in13_V4
 
-
-from PIL import Image, ImageDraw, ImageFont
-import subprocess
-import time
-import re
 
 # Set up fonts:
 if is_pi:
+    picdir = os.path.join(pi_parent_dir, "pic")
     font24 = ImageFont.truetype(os.path.join(picdir, "Font.ttc"), 24)
     font14 = ImageFont.truetype(os.path.join(picdir, "Font.ttc"), 14)
 else:
@@ -103,7 +109,9 @@ def get_uptime():
 
 def get_wifi_strength():
     if is_pi:
-        wifistr = subprocess.check_output("iwconfig wlan0", shell=True).decode("utf-8")
+        wifistr = subprocess.check_output(
+            "/usr/sbin/iwconfig wlan0", shell=True
+        ).decode("utf-8")
     else:
         wifistr = """
         wlan0     IEEE 802.11  ESSID:"CornellCroft"
@@ -148,47 +156,41 @@ def get_datetime():
 
 
 fields = [
-    [None, get_hostname(), font24, [5, 0]],
-    [None, get_temp(), font14, [120, 20]],
-    [None, get_ip_address(), font14, [5, 40]],
+    [None, get_hostname(), font24, [0, 0]],
+    [None, get_ip_address(), font14, [0, 40]],
     ["WiFi", get_wifi_strength(), font14, [120, 40]],
-    [None, get_datetime(), font14, [5, 60]],
+    [None, get_datetime(), font14, [0, 60]],
     ["Mem", get_mem(), font14, [120, 60]],
-    ["Up", get_uptime(), font14, [5, 80]],
-    ["Disk", get_disk(), font14, [5, 100]],
+    ["Disk", get_disk(), font14, [0, 80]],
+    [None, get_temp(), font14, [120, 80]],
+    ["Up", get_uptime(), font14, [0, 100]],
 ]
 
 
-def display():
+def main():
     if is_pi:
         epd = epd2in13_V4.EPD()
         epd.init()
         epd.Clear(0xFF)
-    image = Image.new("1", (250, 122), 255)
-    draw = ImageDraw.Draw(image)
-    for name, field, font, (x, y) in fields:
-        print(name, field, x, y)
-        if name:
-            draw.text((x, y), f"{name} {field}", font=font, fill=0)
-        else:
-            draw.text((x, y), f"{field}", font=font, fill=0)
-
-    if is_pi:
-        epd.display(epd.getbuffer(image))
-        epd.sleep()
-    else:
-        image.save("proto.png")
-        time.sleep(0.5)
-        print(subprocess.Popen("killall Preview", shell=True))
-        time.sleep(0.5)
-        print(subprocess.Popen("open -g proto.png", shell=True))
-
-
-def main():
     try:
-        while True:
-            display()
-            time.sleep(60)
+        image = Image.new("1", (250, 122), 255)
+        draw = ImageDraw.Draw(image)
+        for name, field, font, (x, y) in fields:
+            print(name, field, x, y)
+            if name:
+                draw.text((x, y), f"{name} {field}", font=font, fill=0)
+            else:
+                draw.text((x, y), f"{field}", font=font, fill=0)
+        if is_pi:
+            epd.display(epd.getbuffer(image))
+        else:
+            image.save("proto.png")
+            time.sleep(0.5)
+            print(subprocess.Popen("killall Preview", shell=True))
+            time.sleep(0.5)
+            print(subprocess.Popen("open -g proto.png", shell=True))
+        if is_pi:
+            epd.sleep()
     except KeyboardInterrupt:
         if is_pi:
             epd2in13_V4.epdconfig.module_exit()
