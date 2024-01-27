@@ -1,6 +1,12 @@
-TODO: Refer to blog post
 
 <img src="/pion.png" width="300">
+
+Python implementation for Raspberry Pi Zero W e-paper status
+display, [written up in my blog post](http://johnj.com/posts/e-paper-rpi-display/).
+
+/Nota bene/: I did not follow [my usual
+practices](http://johnj.com/posts/practices/) for this program, as it
+was a quick hobby project meant as a proof-of-concept.
 
 # License
 
